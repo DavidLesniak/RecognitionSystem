@@ -17,11 +17,20 @@ W tym celu:
   10. Wklej skopiowany API Token do pliku access_token
 """
 
+
+"""
+   Pobranie zbioru GTSRB z platformy kaggle
+"""
+
 dir = 'GTSRB'
 
-os.mkdir(dir)
+if not os.path.exists(dir):
+   print('Utworzenie folderu GTSRB')
+   os.mkdir(dir)
+
+print('Pobieranie zbioru GTSRB')
 
 kaggle.api.authenticate()
 kaggle.api.dataset_download_files('meowmeowmeowmeowmeow/gtsrb-german-traffic-sign', path=dir, unzip=True)
-
-print('Pobieranie zakończone')
+   
+print('Pobieranie zakonczone')
