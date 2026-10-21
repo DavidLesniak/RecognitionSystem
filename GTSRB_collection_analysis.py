@@ -1,48 +1,99 @@
 import os
 import matplotlib.pyplot as plt
-import numpy as np
 import pandas as pd
+from PIL import Image
+import random
 
-"""
-	Zbiór treningowy
-"""
+dir = 'GTSRB'
 
-# Wczytanie metadanych zbioru treningowego
-df_Train = pd.read_csv(os.path.join('GTSRB', 'Train.csv'))
-print(df_Train.shape)
-print(df_Train)
+df_Train= pd.read_csv(os.path.join(dir, 'Train.csv'))
+df_Test = pd.read_csv(os.path.join(dir, 'Test.csv'))
 
-# Obliczenie ilosci klas znaków w zbiorze
-classCount = df_Train['ClassId'].value_counts().sort_index()
-#print(classCount)
+# ---------------------------------------------------------------------------------------------------------------------------
 
-plt.subplot(2, 1, 1)
-ax = classCount.plot(width=0.9, rot=0, kind='bar', figsize=(12, 8))
-ax.bar_label(ax.containers[0], padding=3)
-plt.title('Rozkład klas poszczegołnych klass znaków w zbiorze Treningowym', fontsize=14)
-plt.xlabel('ID klasy', fontsize=12)
-plt.ylabel('Liczba wystąpień', fontsize=12)
+print("Liczba obrazów treningowych:", len(df_Train))
+print("Liczba obrazów testowych:", len(df_Test))
+print("Liczba klas znaków:", df_Train["ClassId"].nunique())
 
+# ---------------------------------------------------------------------------------------------------------------------------
 
-"""
-	Zbiór testowy
-"""
-# Wczytanie metadanych zbioru treningowego
-df_Test = pd.read_csv(os.path.join('GTSRB', 'Test.csv'))
-print(df_Test.shape)
-print(df_Test)
+classCount = df_Train["ClassId"].value_counts().sort_index()
 
-# Obliczenie ilosci klas znaków w zbiorze
-classCount = df_Test['ClassId'].value_counts().sort_index()
-#print(classCount)
+plt.figure(figsize=(12, 5))
+plt.bar(classCount.index, classCount.values)
+plt.title("Rozkład liczby obrazów na klasę")
+plt.xlabel("Numer klasy")
+plt.ylabel("Liczba obrazów")
+plt.xticks(range(df_Train['ClassId'].nunique()))
+plt.tight_layout()
+plt.show()
 
-plt.subplot(2, 1, 2)
-ax = classCount.plot(width=0.9, rot=0, kind='bar', color='green', figsize=(12, 8))
-ax.bar_label(ax.containers[0], padding=3)
-plt.title('Rozkład klas poszczegołnych klass znaków w zbiorze Testowym', fontsize=14)
-plt.xlabel('ID klasy', fontsize=12)
-plt.ylabel('Liczba wystąpień', fontsize=12)
+# ---------------------------------------------------------------------------------------------------------------------------
+
+plt.figure(figsize=(12, 5))
+
+for i in range(15):
+    plt.subplot(3, 5, i + 1)
+
+    sample = random.randint(0, len(df_Train["Path"]))
+
+    path = df_Train.iloc[sample]["Path"]
+
+    img = Image.open(os.path.join(dir, path))
+    plt.imshow(img)
+    plt.title("Klasa: " + str(df_Train.iloc[sample]["ClassId"]))
+    plt.axis("off")
+
+plt.suptitle("Przykładowe obrazy zbioru GTSRB")
+plt.tight_layout()
+plt.show()
+
+# ---------------------------------------------------------------------------------------------------------------------------
+
+plt.figure(figsize=(12, 5))
+
+plt.subplot(1, 2, 1)
+plt.hist(df_Train["Width"], bins=20, edgecolor="black")
+plt.title("Rozkład szerokości obrazów")
+plt.xlabel("Szerokość (piksele)")
+plt.ylabel("Liczba obrazów")
+
+plt.subplot(1, 2, 2)
+plt.hist(df_Train["Height"], bins=20, edgecolor="black")
+plt.title("Rozkład wysokości obrazów")
+plt.xlabel("Wysokość (piksele)")
+plt.ylabel("Liczba obrazów")
 
 plt.tight_layout()
 plt.show()
+
+# ---------------------------------------------------------------------------------------------------------------------------
+
+plt.figure(figsize=(8, 6))
+
+plt.scatter(df_Train["Width"], df_Train["Height"], alpha=0.4)
+
+plt.title("Rozkład szerokości i wysokości obrazów GTSRB")
+plt.xlabel("Width (piksele)")
+plt.ylabel("Height (piksele)")
+
+plt.grid(True)
+plt.tight_layout()
+plt.show()
+
+# ---------------------------------------------------------------------------------------------------------------------------
+
+imgRatio = df_Train["Width"] / df_Train["Height"]
+
+plt.figure(figsize=(12, 5))
+
+plt.hist(imgRatio, bins=20, edgecolor="black")
+
+plt.title("Rozkład proporcji obrazów")
+plt.xlabel("Proporcja szerokości do wysokości (Width / Height)")
+plt.ylabel("Liczba obrazów")
+
+plt.tight_layout()
+plt.show()
+
 
