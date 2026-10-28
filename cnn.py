@@ -4,61 +4,81 @@ from tqdm import tqdm
 from PIL import Image
 import numpy as np
 
+import tensorflow as tf
 from sklearn.model_selection import train_test_split
 from tensorflow.keras.utils import to_categorical
 from sklearn.preprocessing import LabelEncoder
 from tensorflow.keras.models import Sequential, load_model
 import matplotlib.pyplot as plt
 
+train_model_version = '2'
+
+"""
+Ustawienia parametrow
+"""
+image_size = (64, 64)
+batch_size = 32 # Linux + GPU 128
+seed = 13
+epochs = 35
+
+path_train = os.path.join('PTSD', 'train')
+path_test = os.path.join('PTSD', 'test')
 
 
-path = os.path.join('PTSD', 'train')
 
-# Wczytanie zdjec
-images = []
-labels = []
-
-category_dirs = os.listdir(path)
-print(f'Klasy: {len(category_dirs)}')
-
-for category in tqdm(category_dirs):
-    files = os.listdir(os.path.join(path, category))
-
-    for img in files:
-        image = Image.open(os.path.join(path, category, img))
-        image = image.resize((30, 30))
-        image = np.array(image)
-        images.append(image)
-        labels.append(category)
-
-images = np.array(images)
-labels = np.array(labels)
-
-print(len(images))
-print(len(labels))
-
-# Zamiana nazw etykiet na liczby
-encoder = LabelEncoder()
-labels = encoder.fit_transform(labels)
-
-# Przygotowanie podziału danych do szkolenia
-X_train, X_test, y_train, y_test = train_test_split(images, labels, test_size=0.2, random_state=13)
-print(X_train.shape, X_test.shape, y_train.shape, y_test.shape)
-
-# Zamiana liczb na wektory one-hot
-num_classes = len(encoder.classes_)
-
-# przygotowanie wyjscia
-y_train = to_categorical(y_train, num_classes)
-y_test = to_categorical(y_test, num_classes)
+"""
+Wykrywanie dostępnych kart graficznych w celu przyśpieszenia szkolenia modelu
+"""
+print("Wykryte karty graficzne:", tf.config.list_physical_devices('GPU'))
 
 
-# Stworzenie modelu
-from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten, Dense, Dropout, BatchNormalization
+
+"""
+Wczytanie danych treningowych, rozdzielenie na 3 ziobry typu tf.data.Dataset:
+    * treningowy - do trenowania modelu
+    * validacyjny - do sprawdzania modelu podczas trenowania
+    * testowy - do sprawdzenia gotowego modelu
+"""
+train_dataset = tf.keras.utils.image_dataset_from_directory(
+    path_train,
+    validation_split=0.2,
+    subset="training",
+    seed=seed,
+    image_size=image_size,
+    batch_size=batch_size
+)
+
+validation_dataset = tf.keras.utils.image_dataset_from_directory(
+    path_train,
+    validation_split=0.2,
+    subset="validation",
+    seed=seed,
+    image_size=image_size,
+    batch_size=batch_size
+)
+
+
+
+"""
+Optymalizacja wczytywanych danych do pamięci
+"""
+AUTOTUNE = tf.data.AUTOTUNE
+
+train_dataset = train_dataset.cache().prefetch(buffer_size=AUTOTUNE)
+validation_dataset = validation_dataset.cache().prefetch(buffer_size=AUTOTUNE)
+
+
+
+"""
+Stworzenie modelu CNN
+"""
+from tensorflow.keras.layers import Input, Conv2D, MaxPooling2D, Flatten, Dense, Dropout, BatchNormalization
 
 model = Sequential()
 
-model.add(Conv2D(32, (3,3), activation='relu', input_shape=(30,30,3)))
+model.add(Input(shape=(64, 64, 3)))
+
+model.add(Conv2D(32, (3,3), activation='relu'))
 model.add(BatchNormalization())
 model.add(MaxPooling2D(pool_size=(2,2)))
 
@@ -79,38 +99,50 @@ model.add(Dense(92, activation='softmax'))
 
 model.compile(
     optimizer='adam',                
-    loss='categorical_crossentropy', 
-    metrics=['accuracy']            
+    loss='sparse_categorical_crossentropy',
+    metrics=['accuracy']
 )
 
 model.summary()
 
 
-# Trenowanie
-epochs = 35
-history1 = model.fit(X_train, y_train, batch_size=128, epochs=epochs, validation_data=(X_test, y_test))
+
+"""
+Trenowanie modelu
+"""
+history = model.fit(train_dataset, validation_data=validation_dataset, epochs=epochs)
 
 
-# Podsumowanie
+
+"""
+Generownaie wykresu podsumowania
+"""
 plt.figure(figsize=(12,5))
 
 # Accuracy
-plt.plot(history1.history['accuracy'], label='Train Accuracy')
-plt.plot(history1.history['val_accuracy'], label='Validation Accuracy')
+plt.plot(history.history['accuracy'], label='Train Accuracy')
+plt.plot(history.history['val_accuracy'], label='Validation Accuracy')
 plt.title('Model Accuracy')
 plt.xlabel('Epoch')
 plt.ylabel('Accuracy')
 plt.legend()
 plt.show()
 plt.figure(figsize=(12,5))
+plt.savefig(f'model_accuracy_v{train_model_version}.png')
 
 # Loss
-plt.plot(history1.history['loss'], label='Train Loss')
-plt.plot(history1.history['val_loss'], label='Validation Loss')
+plt.plot(history.history['loss'], label='Train Loss')
+plt.plot(history.history['val_loss'], label='Validation Loss')
 plt.title('Model Loss')
 plt.xlabel('Epoch')
 plt.ylabel('Loss')
 plt.legend()
 plt.show()
+plt.savefig(f'model_loss_v{train_model_version}.png')
 
-model.save('traffic_classifier.keras')
+
+
+"""
+Zapisanie modelu
+"""
+model.save(f'traffic_classifier_v{train_model_version}.keras')
