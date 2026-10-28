@@ -22,7 +22,7 @@ W tym celu:
    Pobranie zbioru GTSRB z platformy kaggle
 """
 
-dir = 'GTSRB'
+dir = 'PTSD'
 
 if not os.path.exists(dir):
    print('Utworzenie folderu GTSRB')
@@ -31,6 +31,6 @@ if not os.path.exists(dir):
 print('Pobieranie zbioru GTSRB')
 
 kaggle.api.authenticate()
-kaggle.api.dataset_download_files('meowmeowmeowmeowmeow/gtsrb-german-traffic-sign', path=dir, unzip=True)
+kaggle.api.dataset_download_files('kasia12345/polish-traffic-signs-dataset', path=dir, unzip=True)
    
 print('Pobieranie zakonczone')
