@@ -1,0 +1,5 @@
+﻿W trakcie analizy 100 predykcji wykryto podejrzenie błędnej etykiety w zbiorze testowym PTSD.
+Plik:
+PTSD/test/D-28/2019_0719_142601_003 1167_0.jpg
+znajduje się w klasie D-28 (restauracja), jednak przedstawia znak odpowiadający klasie D-23 (stacja paliwowa).
+W związku z tym przypadek ten nie powinien być bezpośrednio interpretowany jako błąd modelu bez dodatkowej weryfikacji.
