@@ -58,6 +58,20 @@ validation_dataset = tf.keras.utils.image_dataset_from_directory(
     batch_size=batch_size
 )
 
+test_dataset = tf.keras.utils.image_dataset_from_directory(
+    path_test,
+    image_size=image_size,
+    batch_size=batch_size
+)
+
+class_count = len(train_dataset.class_names)
+class_count_test = len(train_dataset.class_names)
+
+if class_count != class_count_test:
+    print('UWAGA niektórych zbior treningowy i testowy roznia sie iloscia klas')
+    print('Trening:', class_count)
+    print('Testowy:', class_count_test)
+
 
 
 """
@@ -73,11 +87,12 @@ validation_dataset = validation_dataset.cache().prefetch(buffer_size=AUTOTUNE)
 """
 Stworzenie modelu CNN
 """
-from tensorflow.keras.layers import Input, Conv2D, MaxPooling2D, Flatten, Dense, Dropout, BatchNormalization
+from tensorflow.keras.layers import Input, Rescaling, Conv2D, MaxPooling2D, Flatten, Dense, Dropout, BatchNormalization
 
 model = Sequential()
 
-model.add(Input(shape=(64, 64, 3)))
+model.add(Input(shape=(image_size[0], image_size[1], 3)))
+model.add(Rescaling(1./255))
 
 model.add(Conv2D(32, (3,3), activation='relu'))
 model.add(BatchNormalization())
@@ -96,7 +111,7 @@ model.add(Flatten())
 model.add(Dense(128, activation='relu'))
 model.add(Dropout(0.5))
 
-model.add(Dense(92, activation='softmax'))
+model.add(Dense(class_count, activation='softmax'))
 
 model.compile(
     optimizer='adam',                
@@ -128,8 +143,8 @@ plt.xlabel('Epoch')
 plt.ylabel('Accuracy')
 plt.legend()
 plt.show()
-plt.figure(figsize=(12,5))
 plt.savefig(f'model_accuracy_v{train_model_version}.png')
+plt.figure(figsize=(12,5))
 
 # Loss
 plt.plot(history.history['loss'], label='Train Loss')
@@ -138,8 +153,17 @@ plt.title('Model Loss')
 plt.xlabel('Epoch')
 plt.ylabel('Loss')
 plt.legend()
-plt.show()
 plt.savefig(f'model_loss_v{train_model_version}.png')
+plt.show()
+
+
+
+"""
+Testowanie modelu
+"""
+loss, accuracy = model.evaluate(test_dataset, verbose=1)
+print(f'\nSkuteczność na zbiorze testowym: {accuracy*100:.2f}%')
+print(f'Strata na zbiorze testowym: {loss*100:.2f}%')
 
 
 
