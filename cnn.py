@@ -11,15 +11,16 @@ from sklearn.preprocessing import LabelEncoder
 from tensorflow.keras.models import Sequential, load_model
 import matplotlib.pyplot as plt
 
-train_model_version = '2'
+train_model_version = '3_128x128'
+
 
 """
 Ustawienia parametrow
 """
-image_size = (64, 64)
+image_size = (128, 128)
 batch_size = 32 # Linux + GPU 128
 seed = 13
-epochs = 35
+epochs = 100
 
 path_train = os.path.join('PTSD', 'train')
 path_test = os.path.join('PTSD', 'test')
