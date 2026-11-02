@@ -1,11 +1,12 @@
 import os
 import matplotlib.pyplot as plt
 import pandas as pd
+import numpy as np
 from PIL import Image
 import random
 from tqdm import tqdm
 
-path_train = os.path.join('PTSD', 'train')
+path_train = os.path.join(os.getcwd(), '..', 'PTSD', 'train')
 
 classes = os.listdir(path_train)
 classes_count = []
@@ -15,12 +16,12 @@ classes_height = []
 print("Liczba klas znakow:", len(classes))
 
 for c in classes:
-	folder = os.listdir(os.path.join('PTSD', 'train', c))
-	
+	folder = os.listdir(os.path.join(path_train, c))
+
 	w, h = 0, 0
 
 	for f in folder:
-		img = Image.open(os.path.join('PTSD', 'train', c, f))
+		img = Image.open(os.path.join(path_train, c, f))
 		w, h = img.size
 
 		classes_width.append(w)
@@ -64,6 +65,20 @@ plt.subplot(1, 2, 2)
 plt.hist(classes_height, bins=20, edgecolor="black")
 plt.title("Rozkład wysokości obrazów")
 plt.xlabel("Wysokość (piksele)")
+plt.ylabel("Liczba obrazów")
+
+plt.tight_layout()
+plt.show()
+
+
+imgRatio = np.array(classes_width) / np.array(classes_height)
+
+plt.figure(figsize=(12, 5))
+
+plt.hist(imgRatio, bins=20, edgecolor="black")
+
+plt.title("Rozkład proporcji obrazów")
+plt.xlabel("Proporcja szerokości do wysokości (Width / Height)")
 plt.ylabel("Liczba obrazów")
 
 plt.tight_layout()

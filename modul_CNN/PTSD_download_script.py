@@ -22,7 +22,7 @@ W tym celu:
    Pobranie zbioru GTSRB z platformy kaggle
 """
 
-dir = 'PTSD'
+dir = os.path.join(os.getcwd(), '..', 'PTSD')
 
 if not os.path.exists(dir):
    print('Utworzenie folderu PTSD')
