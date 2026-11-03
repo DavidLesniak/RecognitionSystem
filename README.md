@@ -46,6 +46,7 @@ połączone z interfejsem.
 
 - `app.py` — interfejs wyboru, porównania i edycji zdjęć.
 - `image_processing.py` — przekształcenia i zapis obrazu z parametrami.
+- `classifier_adapter.py` — przygotowanie obrazów i wspólny interfejs klasyfikatora.
 - `requirements.txt` — zależności środowiska.
 - `check_environment.py` — sprawdzenie interpretera i importu OpenCV.
 
@@ -53,6 +54,8 @@ połączone z interfejsem.
 
 Przygotowano środowisko, skrypt sprawdzający import OpenCV i edytor zdjęć.
 Odczyt wideo oraz integracja modeli klasyfikacji i weryfikacji pozostają do wykonania.
+Przygotowano adapter klasyfikatora; wymagania i brakujące materiały opisano
+w [instrukcji integracji](docs/classifier-integration.md).
 
 ## Sprawdzenie edytora
 
