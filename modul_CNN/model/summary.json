@@ -1,0 +1,12 @@
+{
+    "image_size": [
+        128,
+        128
+    ],
+    "batch_size": 128,
+    "seed": 13,
+    "epochs": 100,
+    "model": "traffic_classifier_v6_series",
+    "test_accuracy": "98.05%",
+    "test_loss": "0.1049"
+}
