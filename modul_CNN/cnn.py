@@ -1,36 +1,54 @@
-from pprint import pprint
 import os
-from tqdm import tqdm
-from PIL import Image
 import numpy as np
+import json
+import pandas as pd
 
 import tensorflow as tf
-from sklearn.model_selection import train_test_split
-from tensorflow.keras.utils import to_categorical
-from sklearn.preprocessing import LabelEncoder
+from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
 from tensorflow.keras.models import Sequential, load_model
 import matplotlib.pyplot as plt
 
-train_model_version = '3_128x128'
+
+
+"""
+Parametry używane do naz plików
+"""
+model_version = 'v3_series'
+model_name = f'traffic_classifier_{model_version}'
+model_suffix = '.keras'
+
 
 
 """
 Ustawienia parametrow
 """
 image_size = (128, 128)
-batch_size = 32 # Linux + GPU 128
+batch_size = 128 # Linux + GPU 128
 seed = 13
 epochs = 100
 
-path_train = os.path.join('PTSD', 'train')
-path_test = os.path.join('PTSD', 'test')
+path_train = os.path.join(os.getcwd(), '..', 'PTSD_znaki', 'train')
+path_test  = os.path.join(os.getcwd(), '..', 'PTSD_znaki', 'test')
 
 
 
 """
-Wykrywanie dostępnych kart graficznych w celu przyśpieszenia szkolenia modelu
 """
-print("Wykryte karty graficzne:", tf.config.list_physical_devices('GPU'))
+early_stopping = EarlyStopping(
+    monitor='val_loss',
+    patience=10,
+    min_delta=0.001,
+    restore_best_weights=True,
+    verbose=1
+)
+
+model_checkpoint = ModelCheckpoint(
+    filepath=f'best_{model_name}.keras',
+    monitor='val_loss',
+    save_best_only=True,
+    mode='min',
+    verbose=1
+)
 
 
 
@@ -128,7 +146,15 @@ model.summary()
 """
 Trenowanie modelu
 """
-history = model.fit(train_dataset, validation_data=validation_dataset, epochs=epochs)
+history = model.fit(
+    train_dataset, 
+    validation_data=validation_dataset, 
+    epochs=epochs,
+    callbacks=[
+        early_stopping,
+        model_checkpoint
+    ]
+)
 
 
 
