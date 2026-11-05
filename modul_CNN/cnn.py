@@ -64,13 +64,15 @@ test_dataset = tf.keras.utils.image_dataset_from_directory(
     batch_size=batch_size
 )
 
-class_count = len(train_dataset.class_names)
-class_count_test = len(train_dataset.class_names)
+class_count_train = len(train_dataset.class_names)
+class_count_test  = len(test_dataset.class_names)
 
-if class_count != class_count_test:
+if class_count_train != class_count_test:
     print('UWAGA niektórych zbior treningowy i testowy roznia sie iloscia klas')
-    print('Trening:', class_count)
+    print('Trening:', class_count_train)
     print('Testowy:', class_count_test)
+
+assert train_dataset.class_names == test_dataset.class_names
 
 
 
