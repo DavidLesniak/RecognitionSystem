@@ -199,3 +199,24 @@ print(f'Strata na zbiorze testowym: {loss*100:.2f}%')
 Zapisanie modelu
 """
 model.save(f'traffic_classifier_v{train_model_version}.keras')
+
+
+
+"""
+Zapis do pliku
+"""
+summary_to_file = {
+    'image_size': image_size,
+    'batch_size': batch_size,
+    'seed': seed,
+    'epochs': epochs,
+    'model': model_name,
+    'test_accuracy': f'{accuracy*100:.2f}%',
+    'test_loss': f'{loss:.4f}'
+}
+
+with open('summary.json', 'w') as f:
+    json.dump(summary_to_file, f, indent=4, ensure_ascii=False)
+
+history_df = pd.DataFrame(history.history)
+history_df.to_csv('train_history.csv', index_label='epoch')
