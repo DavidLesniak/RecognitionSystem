@@ -1,0 +1,12 @@
+{
+    "image_size": [
+        128,
+        128
+    ],
+    "batch_size": 256,
+    "seed": 13,
+    "epochs": 100,
+    "model": "cnn_seria_v3",
+    "test_accuracy": "98.23%",
+    "test_loss": "0.0917"
+}
