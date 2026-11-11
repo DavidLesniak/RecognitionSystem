@@ -6,44 +6,53 @@ import pandas as pd
 import tensorflow as tf
 from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
 from tensorflow.keras.models import Sequential, load_model
+from tensorflow.keras import mixed_precision
 import matplotlib.pyplot as plt
 
 
+"""
+Optymalizacja obliczeń GPU
+    * Aktywacja rdzeni Tensor (FP16)
+"""
+mixed_precision.set_global_policy('mixed_float16')
+
+
 
 """
-Parametry używane do naz plików
+Parametry używane do nazw plików
 """
-model_version = 'v3_series'
-model_name = f'traffic_classifier_{model_version}'
+model_version = 'v3'
+model_name = f'cnn_znaki_{model_version}'
 model_suffix = '.keras'
 
 
 
 """
-Ustawienia parametrow
+Ścieżki do folderów z danymi
+"""
+path_train = os.path.join(os.getcwd(), '..', 'PTSD_znaki_zabalansowane', 'train')
+path_test  = os.path.join(os.getcwd(), '..', 'PTSD_znaki_zabalansowane', 'test' )
+
+
+
+"""
+Parametry wejściowe modelu
 """
 image_size = (128, 128)
-batch_size = 128 # Linux + GPU 128
+batch_size = 256
 seed = 13
 epochs = 100
 
-path_train = os.path.join(os.getcwd(), '..', 'PTSD_znaki', 'train')
-path_test  = os.path.join(os.getcwd(), '..', 'PTSD_znaki', 'test')
-
-
-
-"""
-"""
 early_stopping = EarlyStopping(
     monitor='val_loss',
-    patience=10,
+    patience=12,
     min_delta=0.001,
     restore_best_weights=True,
     verbose=1
 )
 
 model_checkpoint = ModelCheckpoint(
-    filepath=f'best_{model_name}.keras',
+    filepath=f'best_{model_name}{model_suffix}',
     monitor='val_loss',
     save_best_only=True,
     mode='min',
@@ -99,7 +108,7 @@ Optymalizacja wczytywanych danych do pamięci
 """
 AUTOTUNE = tf.data.AUTOTUNE
 
-train_dataset = train_dataset.cache().prefetch(buffer_size=AUTOTUNE)
+train_dataset = train_dataset.prefetch(buffer_size=AUTOTUNE)
 validation_dataset = validation_dataset.cache().prefetch(buffer_size=AUTOTUNE)
 
 
@@ -131,12 +140,13 @@ model.add(Flatten())
 model.add(Dense(128, activation='relu'))
 model.add(Dropout(0.5))
 
-model.add(Dense(class_count, activation='softmax'))
+model.add(Dense(class_count_train, activation='softmax', dtype='float32')) # dtype='float32' jeśli ustawiono mixed_float16
 
 model.compile(
     optimizer='adam',                
     loss='sparse_categorical_crossentropy',
-    metrics=['accuracy']
+    metrics=['accuracy'],
+    jit_compile=True
 )
 
 model.summary()
@@ -170,8 +180,8 @@ plt.title('Model Accuracy')
 plt.xlabel('Epoch')
 plt.ylabel('Accuracy')
 plt.legend()
+plt.savefig(f'model_accuracy_v{model_name}.png')
 plt.show()
-plt.savefig(f'model_accuracy_v{train_model_version}.png')
 plt.figure(figsize=(12,5))
 
 # Loss
@@ -181,7 +191,7 @@ plt.title('Model Loss')
 plt.xlabel('Epoch')
 plt.ylabel('Loss')
 plt.legend()
-plt.savefig(f'model_loss_v{train_model_version}.png')
+plt.savefig(f'model_loss_v{model_name}.png')
 plt.show()
 
 
@@ -191,14 +201,14 @@ Testowanie modelu
 """
 loss, accuracy = model.evaluate(test_dataset, verbose=1)
 print(f'\nSkuteczność na zbiorze testowym: {accuracy*100:.2f}%')
-print(f'Strata na zbiorze testowym: {loss*100:.2f}%')
+print(f'Strata na zbiorze testowym: {loss*100:.2f}')
 
 
 
 """
 Zapisanie modelu
 """
-model.save(f'traffic_classifier_v{train_model_version}.keras')
+model.save(f'{model_name}{model_suffix}')
 
 
 
@@ -215,8 +225,8 @@ summary_to_file = {
     'test_loss': f'{loss:.4f}'
 }
 
-with open('summary.json', 'w') as f:
+with open(f'summary_{model_name}{model_suffix}.json', 'w') as f:
     json.dump(summary_to_file, f, indent=4, ensure_ascii=False)
 
 history_df = pd.DataFrame(history.history)
-history_df.to_csv('train_history.csv', index_label='epoch')
+history_df.to_csv(f'train_history_{model_name}{model_suffix}.csv', index_label='epoch')
