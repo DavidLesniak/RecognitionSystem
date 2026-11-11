@@ -6,7 +6,7 @@ from PIL import Image
 import random
 from tqdm import tqdm
 
-path_train = os.path.join(os.getcwd(), '..', 'PTSD', 'train')
+path_train = os.path.join(os.getcwd(), '..', 'PTSD_znaki', 'train')
 
 classes = os.listdir(path_train)
 classes_count = []
@@ -21,11 +21,12 @@ for c in classes:
 	w, h = 0, 0
 
 	for f in folder:
-		img = Image.open(os.path.join(path_train, c, f))
-		w, h = img.size
+		if f not in 'desktop.ini':
+			img = Image.open(os.path.join(path_train, c, f))
+			w, h = img.size
 
-		classes_width.append(w)
-		classes_height.append(h)
+			classes_width.append(w)
+			classes_height.append(h)
 	
 	classes_count.append(len(folder))
 

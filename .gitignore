@@ -1,6 +1,8 @@
 # Folder z zdjęciami
 GTSRB/
-PTSD/
+PTSD_znaki/
+PTSD_znaki_zbalansowane/
+PTSD_seria/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
