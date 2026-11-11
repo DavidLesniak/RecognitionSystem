@@ -16,7 +16,7 @@ model_suffix = '.keras'
 """
 Ścieżki do folderów z danymi
 """
-path_test  = os.path.join(os.getcwd(), '..', 'PTSD_znaki_zbalansowane', 'test')
+path_test  = os.path.join(os.getcwd(), '..', 'PTSD_znaki_zabalansowane', 'test')
 path_model = os.path.join(os.getcwd(), 'model_cnn_gotowy', model_version, f'{model_name}{model_suffix}')
 
 
