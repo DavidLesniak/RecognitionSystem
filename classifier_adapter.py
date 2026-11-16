@@ -14,6 +14,11 @@ DEFAULT_MODEL = (
     Path(__file__).resolve().parent
     / 'modul_CNN' / 'model_cnn_gotowy' / 'v2' / 'traffic_classifier_v2.keras'
 )
+V3_MODEL = (
+    Path(__file__).resolve().parent
+    / 'modul_CNN' / 'model_cnn_gotowy' / 'v3' / 'znaki' / 'best_cnn_znaki_v3.keras'
+)
+V3_CLASSES = V3_MODEL.with_name('class_names.json')
 
 
 def inspect_model_input(path):
@@ -41,16 +46,27 @@ def prepare_image(image_bgr, image_size=(64, 64)):
     Przygotowanie zgodne ze skryptem pierwsza_predykcja.py dla modelu v2.
     Nie dzielimy ponownie przez 255. image_size ma kolejność (wysokość, szerokość).
     """
+    rgb = Image.fromarray(to_rgb(image_bgr))
+    height, width = image_size
+    if height <= 0 or width <= 0:
+        raise ValueError('Wymiary wejściowe muszą być dodatnie.')
+    resized = rgb.resize((width, height), Image.Resampling.BILINEAR)
+    return np.asarray(resized, dtype=np.float32)[None, ...]
+
+
+def to_rgb(image_bgr):
     if not isinstance(image_bgr, np.ndarray) or image_bgr.dtype != np.uint8:
         raise ValueError('Oczekiwany jest obraz NumPy uint8 z OpenCV.')
     if image_bgr.ndim != 3 or image_bgr.shape[2] != 3 or not image_bgr.size:
         raise ValueError('Oczekiwany jest niepusty obraz z trzema kanałami BGR.')
-    height, width = image_size
-    if height <= 0 or width <= 0:
-        raise ValueError('Wymiary wejściowe muszą być dodatnie.')
-    rgb = Image.fromarray(image_bgr[:, :, ::-1])
-    resized = rgb.resize((width, height), Image.Resampling.BILINEAR)
-    return np.asarray(resized, dtype=np.float32)[None, ...]
+    return np.ascontiguousarray(image_bgr[:, :, ::-1])
+
+
+def prepare_v3_image(image_bgr, image_size):
+    from tensorflow.image import resize
+
+    # Warstwa Rescaling w modelu wykonuje dzielenie przez 255.
+    return resize(to_rgb(image_bgr), image_size, method='bilinear')[None, ...]
 
 
 def load_class_names(path):
@@ -72,7 +88,7 @@ class Prediction:
 
 
 class ClassifierAdapter:
-    def __init__(self, model, class_names):
+    def __init__(self, model, class_names, prepare=prepare_image):
         self.image_size = validate_input_shape(model.input_shape)
         self.class_names = tuple(class_names)
         if (not self.class_names or len(set(self.class_names)) != len(self.class_names)
@@ -82,24 +98,29 @@ class ClassifierAdapter:
                 or model.output_shape[-1] != len(self.class_names)):
             raise ValueError('Liczba klas nie odpowiada wyjściu modelu.')
         self.model = model
+        self.prepare = prepare
 
     @classmethod
-    def from_files(cls, model_path, classes_path):
+    def from_files(cls, model_path, classes_path, *, prepare=prepare_image):
         names = load_class_names(classes_path)
         try:
             from tensorflow.keras.models import load_model
         except ImportError as error:
             raise RuntimeError('Uruchomienie klasyfikacji wymaga TensorFlow z requirements.txt.') from error
-        return cls(load_model(model_path, compile=False), names)
+        return cls(load_model(model_path, compile=False), names, prepare)
+
+    @classmethod
+    def from_v3(cls):
+        return cls.from_files(V3_MODEL, V3_CLASSES, prepare=prepare_v3_image)
 
     def predict(self, image_bgr):
-        batch = prepare_image(image_bgr, self.image_size)
+        batch = self.prepare(image_bgr, self.image_size)
         output = np.asarray(self.model.predict(batch, verbose=0))
         if output.shape != (1, len(self.class_names)):
             raise ValueError('Nieprawidłowy kształt predykcji modelu.')
         probabilities = output[0]
         if (not np.isfinite(probabilities).all() or (probabilities < 0).any()
-                or (probabilities > 1).any() or not np.isclose(probabilities.sum(), 1, atol=1e-4)):
+                or (probabilities > 1).any() or not np.isclose(probabilities.sum(), 1, rtol=0, atol=1e-5)):
             raise ValueError('Model nie zwrócił prawidłowych prawdopodobieństw softmax.')
         index = int(np.argmax(probabilities))
         return Prediction(index, self.class_names[index], float(probabilities[index]),
