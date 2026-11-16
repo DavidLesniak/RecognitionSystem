@@ -10,6 +10,7 @@ from tkinter import filedialog, messagebox, ttk
 import cv2
 import numpy as np
 
+from classifier_adapter import ClassifierAdapter
 from image_processing import EditSettings, apply_adjustments, experiment_metadata, save_experiment
 
 
@@ -44,6 +45,10 @@ class ImageViewer:
         self.photos = []
         self.future = None
         self.executor = ThreadPoolExecutor(max_workers=1)
+        self.classifier = None
+        self.classification_executor = ThreadPoolExecutor(max_workers=1)
+        self.classification_future = None
+        self.classification_job = None
         self.resize_job = None
         self.edit_job = None
         self.resetting = False
@@ -65,6 +70,7 @@ class ImageViewer:
         comparison.columnconfigure((0, 1), weight=1, uniform="preview")
         comparison.rowconfigure(0, weight=1)
         self.previews = []
+        self.prediction_text = []
         for column, title in enumerate(("Oryginał", "Po edycji")):
             panel = ttk.LabelFrame(comparison, text=title, padding=6)
             panel.grid(row=0, column=column, sticky="nsew", padx=4)
@@ -74,6 +80,10 @@ class ImageViewer:
             label = ttk.Label(panel, text="Nie wybrano zdjęcia", anchor="center")
             label.grid(row=0, column=0, sticky="nsew")
             self.previews.append(label)
+            prediction = tk.StringVar(value="Klasyfikacja: —")
+            ttk.Label(panel, textvariable=prediction, wraplength=375).grid(
+                row=1, column=0, sticky="w", pady=(6, 0))
+            self.prediction_text.append(prediction)
         comparison.bind("<Configure>", self.schedule_preview)
 
         controls = ttk.LabelFrame(content, text="Ustawienia", padding=10)
@@ -118,6 +128,11 @@ class ImageViewer:
         self.reset_button.pack(side="left", padx=8)
         self.save_button = ttk.Button(actions, text="Zapisz wynik", command=self.save)
         self.save_button.pack(side="left")
+        self.classify_button = ttk.Button(actions, text="Klasyfikuj oryginał",
+                                         command=self.start_classification)
+        self.classify_button.pack(side="left", padx=8)
+        self.classification_status = tk.StringVar()
+        ttk.Label(content, textvariable=self.classification_status, wraplength=850).pack(anchor="w")
         self.status = tk.StringVar(value="Gotowe.")
         ttk.Label(content, textvariable=self.status, wraplength=1050).pack(anchor="w")
         self.set_busy(False)
@@ -155,6 +170,44 @@ class ImageViewer:
         self.reset_button.configure(state="normal" if enabled and not busy else "disabled")
         valid = enabled and not busy and self.edit_job is None and self.result is not None and self.settings() == self.applied_settings
         self.save_button.configure(state="normal" if valid else "disabled")
+        self.update_classify_button()
+
+    def update_classify_button(self):
+        available = self.image is not None and self.classification_future is None
+        self.classify_button.configure(state="normal" if available else "disabled")
+
+    def classify_images(self, images):
+        if self.classifier is None:
+            self.classifier = ClassifierAdapter.from_v3()
+        return [self.classifier.predict(image) for image in images]
+
+    def start_classification(self):
+        if self.image is None or self.classification_future is not None:
+            return
+        images = (self.image,)
+        self.classification_status.set("Klasyfikowanie…")
+        self.classification_future = self.classification_executor.submit(self.classify_images, images)
+        self.update_classify_button()
+        self.classification_job = self.root.after(50, self.poll_classification, images)
+
+    def poll_classification(self, images):
+        if not self.classification_future.done():
+            self.classification_job = self.root.after(50, self.poll_classification, images)
+            return
+        future, self.classification_future = self.classification_future, None
+        self.classification_job = None
+        self.update_classify_button()
+        if images[0] is not self.image:
+            self.classification_status.set("")
+            return
+        try:
+            predictions = future.result()
+        except Exception as error:
+            self.classification_status.set(f"Błąd klasyfikacji: {error}")
+            return
+        for label, prediction in zip(self.prediction_text, predictions):
+            label.set(f"Znak: {prediction.class_name}  |  Pewność: {prediction.confidence:.1%}")
+        self.classification_status.set("")
 
     def choose_image(self):
         path = filedialog.askopenfilename(parent=self.root, title="Wybierz zdjęcie", filetypes=[
@@ -285,10 +338,11 @@ class ImageViewer:
         self.status.set(f"Zapisano: {path.name} i {metadata_path.name}")
 
     def close(self):
-        for job in (self.edit_job, self.resize_job):
+        for job in (self.edit_job, self.resize_job, self.classification_job):
             if job is not None:
                 self.root.after_cancel(job)
         self.executor.shutdown(wait=False, cancel_futures=True)
+        self.classification_executor.shutdown(wait=False, cancel_futures=True)
         self.root.destroy()
 
 
