@@ -1,6 +1,8 @@
 # RecognitionSystem
 
 Projekt inżynierski dotyczący weryfikacji decyzji modelu w klasyfikacji znaków drogowych.
+Edytor pozwala porównać oryginał zdjęcia z wersją po filtrach i zapisać ustawienia
+edycji. Dzięki temu można przygotować powtarzalne przykłady do badań modelu.
 
 ## Uruchomienie środowiska
 
@@ -22,6 +24,9 @@ Uruchom aplikację w folderze repozytorium:
 .\.venv\Scripts\python.exe app.py
 ```
 
+Przy kolejnym uruchomieniu wystarczy to polecenie. Instalacja zależności jest
+potrzebna przy pierwszej konfiguracji środowiska lub po ich aktualizacji.
+
 Przycisk „Wybierz zdjęcie” otwiera plik. Aplikacja pokazuje oryginał i wynik
 obok siebie oraz nazwę i oryginalne wymiary obrazu.
 
@@ -37,6 +42,13 @@ nazwie z parametrami, identyfikatorem źródła i wersjami bibliotek.
 Zapis jest dostępny po zakończeniu przeliczania aktualnych ustawień. Plik źródłowy jest chroniony
 przed nadpisaniem. Błędny plik powoduje komunikat i pozostawia poprzedni obraz.
 
+### Przykład pracy z edytorem
+
+1. Wybierz zdjęcie i ustaw jasność na `+15`.
+2. Po odświeżeniu podglądu porównaj oryginał z obrazem po edycji.
+3. Zapisz wynik. Sprawdź, czy obok pliku PNG pojawił się plik JSON z ustawieniami.
+4. Kliknij „Przywróć oryginał”, aby wrócić do ustawień początkowych.
+
 Kolejność: odszumianie → jasność i kontrast → gamma → CLAHE → nasycenie → wyostrzanie.
 Edycja przygotowuje dane do późniejszych eksperymentów. Poprawa wyglądu zdjęcia
 nie oznacza potwierdzonej poprawy klasyfikacji. Model i Grad-CAM nie są jeszcze
@@ -47,6 +59,8 @@ połączone z interfejsem.
 - `app.py` — interfejs wyboru, porównania i edycji zdjęć.
 - `image_processing.py` — przekształcenia i zapis obrazu z parametrami.
 - `classifier_adapter.py` — przygotowanie obrazów i wspólny interfejs klasyfikatora.
+- `modul_CNN/` — trening, ocena i zapisane modele.
+- `modul_weryfikacji/` — reguły oceny wiarygodności i wyniki ich sprawdzenia.
 - `requirements.txt` — zależności środowiska.
 - `check_environment.py` — sprawdzenie interpretera i importu OpenCV.
 
