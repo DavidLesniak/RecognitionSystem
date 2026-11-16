@@ -1,6 +1,9 @@
 import numpy as np
 
-from reguly_weryfikacji_v3 import verify_prediction
+if __package__:
+    from .reguly_weryfikacji_v3 import verify_prediction
+else:
+    from reguly_weryfikacji_v3 import verify_prediction
 
 
 def evaluate_prediction(probabilities):

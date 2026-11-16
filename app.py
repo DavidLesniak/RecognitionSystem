@@ -12,6 +12,7 @@ import numpy as np
 
 from classifier_adapter import ClassifierAdapter
 from image_processing import EditSettings, apply_adjustments, experiment_metadata, save_experiment
+from modul_weryfikacji.v3.ocena_predykcji_v3 import evaluate_prediction
 
 
 def read_image(path):
@@ -186,7 +187,9 @@ class ImageViewer:
     def classify_images(self, images):
         if self.classifier is None:
             self.classifier = ClassifierAdapter.from_v3()
-        return [self.classifier.predict(image) for image in images]
+        predictions = [self.classifier.predict(image) for image in images]
+        return [(prediction, evaluate_prediction(prediction.probabilities))
+                for prediction in predictions]
 
     def start_classification(self):
         if not self.can_classify():
@@ -213,7 +216,7 @@ class ImageViewer:
         except Exception as error:
             self.classification_status.set(f"Błąd klasyfikacji: {error}")
             return
-        for label, prediction in zip(self.prediction_text, predictions):
+        for label, (prediction, _) in zip(self.prediction_text, predictions):
             label.set(f"Znak: {prediction.class_name}  |  Pewność: {prediction.confidence:.1%}")
         self.classification_status.set("")
 
