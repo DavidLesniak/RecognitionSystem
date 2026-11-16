@@ -15,6 +15,13 @@ from image_processing import EditSettings, apply_adjustments, experiment_metadat
 from modul_weryfikacji.v3.ocena_predykcji_v3 import evaluate_prediction
 
 
+DECISION_LABELS = {
+    "ACCEPT": "wynik spełnia progi akceptacji",
+    "WARN": "wynik wymaga ostrożności",
+    "REJECT": "niska wiarygodność",
+}
+
+
 def read_image(path):
     """Odczytaj obraz, także ze ścieżki zawierającej polskie znaki."""
     try:
@@ -82,7 +89,7 @@ class ImageViewer:
             label.grid(row=0, column=0, sticky="nsew")
             self.previews.append(label)
             prediction = tk.StringVar(value="Klasyfikacja: —")
-            ttk.Label(panel, textvariable=prediction, wraplength=375).grid(
+            ttk.Label(panel, textvariable=prediction, wraplength=375, justify="left").grid(
                 row=1, column=0, sticky="w", pady=(6, 0))
             self.prediction_text.append(prediction)
         comparison.bind("<Configure>", self.schedule_preview)
@@ -216,8 +223,10 @@ class ImageViewer:
         except Exception as error:
             self.classification_status.set(f"Błąd klasyfikacji: {error}")
             return
-        for label, (prediction, _) in zip(self.prediction_text, predictions):
-            label.set(f"Znak: {prediction.class_name}  |  Pewność: {prediction.confidence:.1%}")
+        for label, (prediction, assessment) in zip(self.prediction_text, predictions):
+            decision = assessment["decision"]
+            label.set(f"Znak: {prediction.class_name}  |  Pewność: {prediction.confidence:.1%}\n"
+                      f"Weryfikacja: {decision} — {DECISION_LABELS[decision]}")
         self.classification_status.set("")
 
     def choose_image(self):
