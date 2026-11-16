@@ -8,7 +8,7 @@ odświeżenia i `viewer.settings() == viewer.applied_settings`.
 
 ## Model dostępny w repozytorium
 
-`traffic classifier archive/v2/traffic_classifier_v2.keras` ma wejście
+`modul_CNN/model_cnn_gotowy/v2/traffic_classifier_v2.keras` ma wejście
 `(None, 64, 64, 3)` i wyjście z 92 prawdopodobieństwami softmax.
 Kod `modul_CNN/cnn.py` opisuje już kolejny wariant 128×128; nie należy
 przenosić tego rozmiaru do obsługi zapisanego modelu v2.
@@ -16,7 +16,7 @@ przenosić tego rozmiaru do obsługi zapisanego modelu v2.
 Adapter konwertuje BGR na RGB, skaluje przez Pillow z interpolacją bilinear
 i dodaje wymiar partii. Wynik ma typ float32 i wartości 0–255.
 To przygotowanie odpowiada `load_img` i `img_to_array` użytym przez
-`modul_weryfikacji/pierwsza_predykcja.py`. Nie dodajemy dzielenia przez 255:
+`modul_weryfikacji/v2/pierwsza_predykcja.py`. Nie dodajemy dzielenia przez 255:
 w skrypcie predykcji go nie ma, a zapisany model v2 nie zawiera Rescaling.
 Przed użyciem kolejnej wersji modelu należy potwierdzić jej sposób przygotowania
 danych; sam kształt wejścia nie określa normalizacji.

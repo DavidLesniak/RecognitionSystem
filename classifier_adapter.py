@@ -10,7 +10,10 @@ import numpy as np
 from PIL import Image
 
 
-DEFAULT_MODEL = Path(__file__).resolve().parent / 'traffic classifier archive/v2/traffic_classifier_v2.keras'
+DEFAULT_MODEL = (
+    Path(__file__).resolve().parent
+    / 'modul_CNN' / 'model_cnn_gotowy' / 'v2' / 'traffic_classifier_v2.keras'
+)
 
 
 def inspect_model_input(path):
