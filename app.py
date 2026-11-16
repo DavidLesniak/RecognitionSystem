@@ -128,7 +128,7 @@ class ImageViewer:
         self.reset_button.pack(side="left", padx=8)
         self.save_button = ttk.Button(actions, text="Zapisz wynik", command=self.save)
         self.save_button.pack(side="left")
-        self.classify_button = ttk.Button(actions, text="Klasyfikuj oryginał",
+        self.classify_button = ttk.Button(actions, text="Porównaj klasyfikację",
                                          command=self.start_classification)
         self.classify_button.pack(side="left", padx=8)
         self.classification_status = tk.StringVar()
@@ -160,6 +160,7 @@ class ImageViewer:
             if self.edit_job is not None:
                 self.root.after_cancel(self.edit_job)
             self.edit_job = self.root.after(180, self.apply)
+            self.update_classify_button()
 
     def set_busy(self, busy):
         self.open_button.configure(state="disabled" if busy else "normal")
@@ -173,8 +174,14 @@ class ImageViewer:
         self.update_classify_button()
 
     def update_classify_button(self):
-        available = self.image is not None and self.classification_future is None
+        available = self.can_classify()
         self.classify_button.configure(state="normal" if available else "disabled")
+
+    def can_classify(self):
+        return (self.image is not None and self.result is not None
+                and self.future is None and self.edit_job is None
+                and self.settings() == self.applied_settings
+                and self.classification_future is None)
 
     def classify_images(self, images):
         if self.classifier is None:
@@ -182,9 +189,9 @@ class ImageViewer:
         return [self.classifier.predict(image) for image in images]
 
     def start_classification(self):
-        if self.image is None or self.classification_future is not None:
+        if not self.can_classify():
             return
-        images = (self.image,)
+        images = (self.image, self.result)
         self.classification_status.set("Klasyfikowanie…")
         self.classification_future = self.classification_executor.submit(self.classify_images, images)
         self.update_classify_button()
@@ -197,7 +204,8 @@ class ImageViewer:
         future, self.classification_future = self.classification_future, None
         self.classification_job = None
         self.update_classify_button()
-        if images[0] is not self.image:
+        if (images[0] is not self.image or images[1] is not self.result
+                or not self.can_classify()):
             self.classification_status.set("")
             return
         try:
