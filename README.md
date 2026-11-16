@@ -1,8 +1,8 @@
 # RecognitionSystem
 
 RecognitionSystem to projekt inżynierski dotyczący klasyfikacji polskich znaków
-drogowych i oceny wiarygodności predykcji. Aplikacja pokazuje, jak zmienia się
-wynik klasyfikacji tego samego zdjęcia przed zastosowaniem filtrów i po nim.
+drogowych i oceny wiarygodności predykcji. Aplikacja pozwala edytować zdjęcie
+znaku i sprawdzić, jak model klasyfikuje aktualny obraz.
 
 ## Uruchomienie na Windows
 
@@ -26,8 +26,8 @@ wystarczy wykonać ostatnie polecenie w folderze `RecognitionSystem`. Skrypt
 
 ## Edycja zdjęć
 
-Przycisk „Wybierz zdjęcie” otwiera plik. Aplikacja pokazuje oryginał i wynik
-obok siebie oraz nazwę i oryginalne wymiary obrazu.
+Przycisk „Wybierz zdjęcie” otwiera plik i pokazuje jego nazwę oraz wymiary.
+Po lewej stronie widać podgląd zdjęcia, a po prawej decyzję modelu i panel „Filtry”.
 
 Ustaw jasność, kontrast, nasycenie, gamma, wyostrzanie, odszumianie lub
 lokalną poprawę kontrastu (CLAHE). Podgląd odświeża się automatycznie po krótkiej
@@ -40,14 +40,15 @@ co ułatwia odtworzenie edycji. Zapis jest dostępny po przeliczeniu podglądu.
 
 ## Klasyfikacja i weryfikacja
 
-Wczytaj zdjęcie znaku, ustaw filtry i kliknij „Porównaj klasyfikację”.
-Pod każdym podglądem zobaczysz kod znaku, pewność modelu CNN v3 i ocenę
-wiarygodności: `ACCEPT`, `WARN` albo `REJECT`. Po zmianie zdjęcia lub filtrów
-kliknij przycisk ponownie, aby obliczyć nowe wyniki.
+Wczytaj zdjęcie znaku i kliknij „Klasyfikuj zdjęcie”. Panel „Decyzja modelu”
+pokazuje kod i nazwę znaku, ocenę wiarygodności oraz pewność, margines i entropię
+dla obrazu widocznego w podglądzie. Przy `WARN` lub `REJECT` aplikacja
+pokazuje też drugi najbardziej prawdopodobny znak i jego wynik. Po zmianie
+zdjęcia lub filtrów kliknij przycisk ponownie, aby obliczyć nowe wyniki.
 
 Aplikacja używa zapisanego modelu CNN v3 `znaki` z 94 klasami. Przed predykcją
-adapter przygotowuje dla modelu obraz RGB o rozmiarze 128 × 128 pikseli. Oryginał
-i zdjęcie po edycji przechodzą przez ten sam model i te same reguły weryfikacji.
+adapter przygotowuje dla modelu obraz RGB o rozmiarze 128 × 128 pikseli.
+Nazwy znaków są odczytywane z [pliku etykiet](modul_CNN/model_cnn_gotowy/v3/znaki/etykiety_znaki.csv).
 
 Weryfikator modelu v3 `znaki` bierze pod uwagę pewność modelu, różnicę między
 dwoma najwyższymi prawdopodobieństwami oraz entropię, która rośnie, gdy model
@@ -65,7 +66,8 @@ Ocena opisuje wiarygodność predykcji według [reguł v3](modul_weryfikacji/v3/
 
 1. Rozpakuj `PTSD_znaki.zip` i otwórz w aplikacji zdjęcie
    `PTSD_znaki/test/A-1/2019_0719_142601_003 0157_0.jpg`.
-2. Ustaw jasność na `+15` i po odświeżeniu podglądu kliknij „Porównaj klasyfikację”.
+2. Kliknij „Klasyfikuj zdjęcie”. Ustaw jasność na `+15` i ponów klasyfikację
+   po odświeżeniu podglądu.
 3. W przeprowadzonej próbie obie wersje zdjęcia dały wynik `A-1` i ocenę `ACCEPT`.
 
 Przykład z oceną `REJECT` i pełniejsze wyniki prób są w [opisie integracji](docs/classifier-integration.md#sprawdzenie-aplikacji-na-zapisanym-modelu).

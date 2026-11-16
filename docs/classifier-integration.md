@@ -17,11 +17,10 @@ prawdopodobieństwa, różnicy między dwoma najwyższymi wynikami i entropii.
 ## Sprawdzenie aplikacji na zapisanym modelu
 
 1. Uruchom aplikację zgodnie z README i rozpakuj `PTSD_znaki.zip`.
-2. Otwórz jeden z obrazów poniżej, ustaw jasność na `+15` i poczekaj
-   na odświeżenie podglądu.
-3. Kliknij „Porównaj klasyfikację” i odczytaj oba wyniki.
-4. Zmień filtr albo przywróć oryginał. Wyniki powinny zniknąć.
-   Po kolejnym porównaniu aplikacja pokaże wyniki dla bieżących ustawień.
+2. Otwórz jeden z obrazów poniżej. Kliknij „Klasyfikuj zdjęcie” i odczytaj wynik
+   w panelu „Decyzja modelu”.
+3. Ustaw jasność na `+15`. Aplikacja odświeży podgląd i wyczyści poprzedni wynik.
+4. Po odświeżeniu kliknij „Klasyfikuj zdjęcie” i odczytaj wynik dla aktualnego obrazu.
 
 Przykładowe wyniki z aplikacji w Windows i TensorFlow 2.21.0:
 
