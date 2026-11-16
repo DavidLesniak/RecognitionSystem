@@ -163,6 +163,7 @@ class ImageViewer:
             if current == self.last_observed_settings:
                 return
             self.last_observed_settings = current
+            self.clear_classification()
             self.status.set("Aktualizowanie podglądu…")
             self.save_button.configure(state="disabled")
             if self.edit_job is not None:
@@ -191,6 +192,11 @@ class ImageViewer:
                 and self.settings() == self.applied_settings
                 and self.classification_future is None)
 
+    def clear_classification(self):
+        for label in self.prediction_text:
+            label.set("Klasyfikacja: —")
+        self.classification_status.set("")
+
     def classify_images(self, images):
         if self.classifier is None:
             self.classifier = ClassifierAdapter.from_v3()
@@ -202,6 +208,7 @@ class ImageViewer:
         if not self.can_classify():
             return
         images = (self.image, self.result)
+        self.clear_classification()
         self.classification_status.set("Klasyfikowanie…")
         self.classification_future = self.classification_executor.submit(self.classify_images, images)
         self.update_classify_button()
@@ -254,6 +261,7 @@ class ImageViewer:
     def reset(self):
         if self.image is None or self.future is not None:
             return
+        self.clear_classification()
         defaults = asdict(EditSettings())
         if self.edit_job is not None:
             self.root.after_cancel(self.edit_job)
