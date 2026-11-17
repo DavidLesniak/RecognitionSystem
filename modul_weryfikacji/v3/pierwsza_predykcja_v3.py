@@ -4,16 +4,25 @@ from pathlib import Path
 import numpy as np
 import tensorflow as tf
 
+project_path = Path(__file__).resolve().parent
 
-project_dir = Path(__file__).resolve().parent
-dataset_dir = project_dir / "PTSD_znaki_zbalansowane"
-train_dir = dataset_dir / "train"
-test_dir = dataset_dir / "test"
-model_path = project_dir / "best_cnn_znaki_v3.keras"
+# Wczytanie wytrenowanego modelu
+model = tf.keras.models.load_model(
+    project_path / "best_cnn_znaki_v3.keras",
+    compile=False
+)
 
-# Keras ustala indeksy na podstawie posortowanych nazw katalogów train.
-class_names = sorted(path.name for path in train_dir.iterdir() if path.is_dir())
-with (dataset_dir / "etykiety_znaki.csv").open(
+dataset_path = project_path / "PTSD_znaki_zbalansowane"
+
+# Odczytanie klas w takiej samej kolejności jak podczas treningu
+train_path = dataset_path / "train"
+class_names = sorted(
+    folder.name for folder in train_path.iterdir()
+    if folder.is_dir()
+)
+
+# Opisy znaków odczytujemy według kodu znaku
+with (dataset_path / "etykiety_znaki.csv").open(
     encoding="utf-8-sig", newline=""
 ) as file:
     sign_names = {
@@ -21,46 +30,69 @@ with (dataset_dir / "etykiety_znaki.csv").open(
         for row in csv.DictReader(file, delimiter=";")
     }
 
-if set(class_names) != set(sign_names):
-    raise ValueError("Kody klas w folderze train i w CSV różnią się.")
+if len(class_names) != model.output_shape[-1] or set(class_names) != set(sign_names):
+    raise ValueError("Klasy w folderze train, modelu i CSV nie zgadzają się.")
 
-extensions = {".jpg", ".jpeg", ".png", ".bmp", ".gif"}
+# Wybranie pierwszego dostępnego zdjęcia ze zbioru testowego
+test_path = dataset_path / "test"
+extensions = {".jpg", ".jpeg", ".png", ".bmp"}
+
 images = sorted(
-    path for path in test_dir.rglob("*")
+    path for path in test_path.glob("*/*")
     if path.is_file() and path.suffix.lower() in extensions
 )
+
 if not images:
-    raise ValueError(f"Nie znaleziono zdjęć w {test_dir}.")
+    raise RuntimeError(f"Nie znaleziono zdjęć w {test_path}")
 
 image_path = images[0]
-true_class = image_path.relative_to(test_dir).parts[0]
-if true_class not in sign_names:
-    raise ValueError(f"Nieznana klasa zdjęcia testowego: {true_class}")
+true_class = image_path.parent.name
 
-model = tf.keras.models.load_model(model_path, compile=False)
-if len(class_names) != model.output_shape[-1]:
-    raise ValueError("Liczba klas w folderze train nie zgadza się z modelem.")
+# Przygotowanie zdjęcia dla modelu CNN
+image = tf.keras.utils.load_img(
+    image_path,
+    target_size=(128, 128),
+    color_mode="rgb",
+    interpolation="bilinear"
+)
 
-image_bytes = tf.io.read_file(str(image_path))
-image = tf.io.decode_image(image_bytes, channels=3, expand_animations=False)
-image = tf.image.resize(image, (128, 128), method="bilinear")
-probabilities = model(image[None, ...], training=False).numpy()[0]
+image_array = tf.keras.utils.img_to_array(image)
+image_batch = np.expand_dims(image_array, axis=0)
 
-top_3 = np.argsort(probabilities)[::-1][:3]
-predicted_class = class_names[top_3[0]]
-confidence = float(probabilities[top_3[0]])
-margin = confidence - float(probabilities[top_3[1]])
-positive = probabilities[probabilities > 0]
-entropy = float(-np.sum(positive * np.log(positive)))
+# Wykonanie predykcji
+predictions = model.predict(image_batch, verbose=0)[0]
 
-print("Zdjęcie:", image_path.relative_to(project_dir))
-print(f"Etykieta w zbiorze: {true_class} – {sign_names[true_class]}")
-print(f"Predykcja: {predicted_class} – {sign_names[predicted_class]}")
+predicted_index = int(np.argmax(predictions))
+predicted_class = class_names[predicted_index]
+confidence = float(predictions[predicted_index])
+
+# Obliczanie margin
+sorted_probabilities = np.sort(predictions)[::-1]
+margin = float(sorted_probabilities[0] - sorted_probabilities[1])
+
+# Obliczanie entropy
+nonzero_probabilities = predictions[predictions > 0]
+entropy = float(
+    -np.sum(nonzero_probabilities * np.log(nonzero_probabilities))
+)
+
+# Wyświetlenie wyniku
+print("\n--- PIERWSZA PREDYKCJA V3 ---")
+print("Zdjęcie:", image_path.relative_to(project_path))
+print("Prawdziwa klasa:", true_class, "–", sign_names[true_class])
+print("Klasa przewidziana:", predicted_class, "–", sign_names[predicted_class])
 print(f"Confidence: {confidence:.8f}")
 print(f"Margin:     {margin:.8f}")
 print(f"Entropy:    {entropy:.8f}")
 
-print("\nTrzy najwyższe wyniki Softmax")
+if true_class == predicted_class:
+    print("Wynik: POPRAWNA PREDYKCJA")
+else:
+    print("Wynik: BŁĘDNA PREDYKCJA")
+
+print("\nTrzy najwyższe wyniki Softmax:")
+
+top_3 = np.argsort(predictions)[::-1][:3]
+
 for index in top_3:
-    code = class_names[index]
-    print(f"{code} – {sign_names[code]}: {probabilities[index]:.4f}")
+    print(f"{class_names[index]}: {predictions[index]:.4f}")
