@@ -1,6 +1,5 @@
-import csv
-from collections import Counter
 from pathlib import Path
+import csv
 
 import numpy as np
 import tensorflow as tf
@@ -8,68 +7,68 @@ import tensorflow as tf
 from reguly_weryfikacji_v3 import verify_prediction
 
 
-project_dir = Path(__file__).resolve().parent
-dataset_dir = project_dir / "PTSD_znaki_zbalansowane"
-train_dir = dataset_dir / "train"
-test_dir = dataset_dir / "test"
-model_path = project_dir / "best_cnn_znaki_v3.keras"
-output_path = project_dir / "wyniki_testu_v3.csv"
+PROJECT_PATH = Path(__file__).resolve().parent
+DATASET_PATH = PROJECT_PATH / "PTSD_znaki_zbalansowane"
+MODEL_PATH = PROJECT_PATH / "best_cnn_znaki_v3.keras"
+TRAIN_PATH = DATASET_PATH / "train"
+TEST_PATH = DATASET_PATH / "test"
+OUTPUT_PATH = PROJECT_PATH / "wyniki_testu_v3.csv"
 
-# Bez losowania ścieżki zdjęć mają tę samą kolejność co predykcje.
-test_dataset = tf.keras.utils.image_dataset_from_directory(
-    test_dir,
-    image_size=(128, 128),
-    batch_size=32,
-    shuffle=False,
+BATCH_SIZE = 32
+
+# Wczytanie wytrenowanego modelu
+model = tf.keras.models.load_model(
+    MODEL_PATH,
+    compile=False
 )
-class_names = sorted(path.name for path in train_dir.iterdir() if path.is_dir())
-if class_names != test_dataset.class_names:
-    raise ValueError("Klasy w katalogach train i test różnią się.")
 
-model = tf.keras.models.load_model(model_path, compile=False)
+# Odczytanie kolejności klas ze zbioru treningowego
+train_classes = sorted(
+    folder.name
+    for folder in TRAIN_PATH.iterdir()
+    if folder.is_dir()
+)
+
+# Wczytanie zdjęć testowych partiami, bez losowania
+test_dataset = tf.keras.utils.image_dataset_from_directory(
+    TEST_PATH,
+    image_size=(128, 128),
+    batch_size=BATCH_SIZE,
+    shuffle=False
+)
+
+class_names = test_dataset.class_names
+file_paths = test_dataset.file_paths
+
+if class_names != train_classes:
+    raise ValueError(
+        "Kolejność klas w zbiorze testowym nie zgadza się "
+        "z kolejnością klas treningowych."
+    )
+
 if len(class_names) != model.output_shape[-1]:
-    raise ValueError("Liczba klas w folderze train nie zgadza się z modelem.")
+    raise ValueError("Liczba klas nie zgadza się z modelem.")
 
-results = []
-counts = Counter()
-image_paths = iter(test_dataset.file_paths)
-
-for images, labels in test_dataset:
-    # Skalowanie pikseli wykonuje warstwa Rescaling w modelu.
-    predictions = model(images, training=False).numpy()
-
-    for probabilities, true_index in zip(predictions, labels.numpy(), strict=True):
-        image_path = Path(next(image_paths))
-        predicted_index = int(np.argmax(probabilities))
-        confidence = float(probabilities[predicted_index])
-        sorted_probabilities = np.sort(probabilities)
-        margin = confidence - float(sorted_probabilities[-2])
-        positive = probabilities[probabilities > 0]
-        entropy = float(-np.sum(positive * np.log(positive)))
-
-        decision = verify_prediction(confidence, margin, entropy)
-        correct = int(true_index == predicted_index)
-        counts[decision, correct] += 1
-        results.append([
-            image_path.relative_to(project_dir),
-            class_names[true_index],
-            class_names[predicted_index],
-            correct,
-            confidence,
-            margin,
-            entropy,
-            decision,
-        ])
-
-    print(f"Przeanalizowano zdjęć: {len(results)}", end="\r", flush=True)
-
-if not results:
+if not file_paths:
     raise ValueError("Zbiór testowy jest pusty.")
-if len(results) != len(test_dataset.file_paths):
-    raise ValueError("Liczba predykcji różni się od liczby zdjęć testowych.")
 
-with output_path.open("w", encoding="utf-8-sig", newline="") as file:
+counters = {
+    "ACCEPT": {"poprawne": 0, "bledne": 0},
+    "WARN": {"poprawne": 0, "bledne": 0},
+    "REJECT": {"poprawne": 0, "bledne": 0},
+}
+
+total = 0
+correct_count = 0
+
+with OUTPUT_PATH.open(
+    "w",
+    newline="",
+    encoding="utf-8-sig"
+) as file:
+
     writer = csv.writer(file, delimiter=";")
+
     writer.writerow([
         "zdjecie",
         "prawdziwa_klasa",
@@ -78,25 +77,86 @@ with output_path.open("w", encoding="utf-8-sig", newline="") as file:
         "confidence",
         "margin",
         "entropy",
-        "decyzja",
+        "decyzja"
     ])
-    writer.writerows(results)
 
-total = len(results)
-accepted = counts["ACCEPT", 1] + counts["ACCEPT", 0]
-flagged_disagreements = counts["WARN", 0] + counts["REJECT", 0]
-all_disagreements = flagged_disagreements + counts["ACCEPT", 0]
+    for images, labels in test_dataset:
+
+        # Warstwa Rescaling w modelu skaluje piksele.
+        probabilities_batch = model(
+            images, training=False
+        ).numpy()
+
+        for probabilities, true_index in zip(
+            probabilities_batch, labels.numpy(), strict=True
+        ):
+
+            image_path = Path(file_paths[total]).relative_to(PROJECT_PATH)
+
+            predicted_index = int(np.argmax(probabilities))
+            true_index = int(true_index)
+
+            true_class = class_names[true_index]
+            predicted_class = class_names[predicted_index]
+
+            confidence = float(np.max(probabilities))
+
+            sorted_probs = np.sort(probabilities)[::-1]
+            margin = confidence - float(sorted_probs[1])
+
+            positive_probs = probabilities[
+                probabilities > 0
+            ]
+            entropy = float(
+                -np.sum(positive_probs * np.log(positive_probs))
+            )
+
+            decision = verify_prediction(confidence, margin, entropy)
+            correct = true_index == predicted_index
+
+            total += 1
+
+            if correct:
+                correct_count += 1
+                counters[decision]["poprawne"] += 1
+            else:
+                counters[decision]["bledne"] += 1
+
+            writer.writerow([
+                image_path,
+                true_class,
+                predicted_class,
+                int(correct),
+                confidence,
+                margin,
+                entropy,
+                decision
+            ])
+
+        print(f"Przeanalizowano zdjęć: {total}", end="\r", flush=True)
+
+if total != len(file_paths):
+    raise ValueError("Liczba predykcji różni się od liczby zdjęć testowych.")
+
+accuracy = correct_count / total * 100
+accepted = counters["ACCEPT"]
+accepted_total = accepted["poprawne"] + accepted["bledne"]
+flagged_disagreements = counters["WARN"]["bledne"] + counters["REJECT"]["bledne"]
+flagged_correct = counters["WARN"]["poprawne"] + counters["REJECT"]["poprawne"]
 
 print("\n\n--- OCENA NA ZBIORZE TESTOWYM V3 ---")
 print(f"Zdjęcia: {total}")
-print(f"Zgodność CNN z etykietami: {100 * (total - all_disagreements) / total:.2f}%")
-for decision in ("ACCEPT", "WARN", "REJECT"):
+print(f"Zgodność CNN z etykietami: {accuracy:.2f}%")
+
+for decision, counts in counters.items():
+    decision_total = counts["poprawne"] + counts["bledne"]
     print(
-        f"{decision}: {counts[decision, 1] + counts[decision, 0]} "
-        f"(zgodne: {counts[decision, 1]}, niezgodne: {counts[decision, 0]})"
+        f"{decision}: {decision_total} "
+        f"(zgodne: {counts['poprawne']}, niezgodne: {counts['bledne']})"
     )
-print(f"Pokrycie ACCEPT: {100 * accepted / total:.2f}%")
-print(f"Niezgodności w WARN lub REJECT: {flagged_disagreements}/{all_disagreements}")
-print(f"Niezgodności w ACCEPT: {counts['ACCEPT', 0]}")
-print(f"Zgodne predykcje w WARN lub REJECT: {counts['WARN', 1] + counts['REJECT', 1]}")
-print(f"Wyniki zapisano do: {output_path}")
+
+print(f"Pokrycie ACCEPT: {100 * accepted_total / total:.2f}%")
+print(f"Niezgodności w WARN lub REJECT: {flagged_disagreements}/{total - correct_count}")
+print(f"Niezgodności w ACCEPT: {accepted['bledne']}")
+print(f"Zgodne predykcje w WARN lub REJECT: {flagged_correct}")
+print(f"Wyniki zapisano do: {OUTPUT_PATH}")
