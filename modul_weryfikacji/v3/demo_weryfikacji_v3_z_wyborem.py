@@ -10,8 +10,12 @@ from PIL import Image, ImageOps, ImageTk
 from reguly_weryfikacji_v3 import verify_prediction
 
 
-PROJECT_DIR = Path(__file__).resolve().parent
-DATASET_DIR = PROJECT_DIR / "PTSD_znaki_zbalansowane"
+PROJECT_PATH = Path(__file__).resolve().parent
+DATASET_PATH = PROJECT_PATH / "PTSD_znaki_zbalansowane"
+MODEL_PATH = PROJECT_PATH / "best_cnn_znaki_v3.keras"
+TRAIN_PATH = DATASET_PATH / "train"
+TEST_PATH = DATASET_PATH / "test"
+
 EXAMPLES = [
     ("A-1", "2019_0719_142601_003 0157_0.jpg"),
     ("C-9", "2019_0809_155001_003 1218_0.jpg"),
@@ -25,20 +29,31 @@ DECISION_MESSAGES = {
 
 
 def predict(model, image_path):
+    # Przygotowanie zdjęcia tak jak w analizie zbioru testowego
     image_bytes = tf.io.read_file(str(image_path))
     image = tf.io.decode_image(image_bytes, channels=3, expand_animations=False)
-    # RGB, 128 × 128 i interpolacja jak w pierwszej predykcji V3.
-    # Model sam skaluje piksele.
-    image = tf.image.resize(image, (128, 128), method="bilinear")
-    probabilities = model(image[None, ...], training=False).numpy()[0]
+    image_array = tf.image.resize(image, (128, 128), method="bilinear").numpy()
 
-    top_two = np.argsort(probabilities)[-2:][::-1]
-    index = int(top_two[0])
-    confidence = float(probabilities[index])
-    margin = confidence - float(probabilities[top_two[1]])
-    positive = probabilities[probabilities > 0]
-    entropy = float(-np.sum(positive * np.log(positive)))
-    return index, confidence, margin, entropy
+    # Model sam skaluje piksele w warstwie Rescaling
+    image_batch = np.expand_dims(image_array, axis=0)
+
+    # Wykonanie predykcji
+    predictions = model.predict(image_batch, verbose=0)[0]
+
+    top_two = np.argsort(predictions)[-2:][::-1]
+    predicted_index = int(top_two[0])
+    confidence = float(predictions[predicted_index])
+
+    # Obliczanie margin
+    margin = confidence - float(predictions[top_two[1]])
+
+    # Obliczanie entropy
+    nonzero_probabilities = predictions[predictions > 0]
+    entropy = float(
+        -np.sum(nonzero_probabilities * np.log(nonzero_probabilities))
+    )
+
+    return predicted_index, confidence, margin, entropy
 
 
 def show_image(label, path):
@@ -51,9 +66,20 @@ def show_image(label, path):
 
 
 def main():
-    train_dir = DATASET_DIR / "train"
-    class_names = sorted(path.name for path in train_dir.iterdir() if path.is_dir())
-    with (DATASET_DIR / "etykiety_znaki.csv").open(
+    # Wczytanie wytrenowanego modelu
+    model = tf.keras.models.load_model(
+        MODEL_PATH,
+        compile=False
+    )
+
+    # Odczytanie klas w takiej samej kolejności jak podczas treningu
+    class_names = sorted(
+        folder.name for folder in TRAIN_PATH.iterdir()
+        if folder.is_dir()
+    )
+
+    # Opisy znaków odczytujemy według kodu znaku
+    with (DATASET_PATH / "etykiety_znaki.csv").open(
         encoding="utf-8-sig", newline=""
     ) as file:
         sign_names = {
@@ -61,9 +87,6 @@ def main():
             for row in csv.DictReader(file, delimiter=";")
         }
 
-    model = tf.keras.models.load_model(
-        PROJECT_DIR / "best_cnn_znaki_v3.keras", compile=False
-    )
     if len(class_names) != model.output_shape[-1] or set(class_names) != set(sign_names):
         raise ValueError("Kody w folderze train, CSV i wyjścia modelu muszą się zgadzać.")
 
@@ -91,13 +114,13 @@ def main():
     result.grid(row=4, column=0, columnspan=2, pady=(8, 0))
 
     def show_prediction(image_path, true_class=None):
-        index, confidence, margin, entropy = predict(model, image_path)
-        predicted_class = class_names[index]
+        predicted_index, confidence, margin, entropy = predict(model, image_path)
+        predicted_class = class_names[predicted_index]
         decision = verify_prediction(confidence, margin, entropy)
 
         # Obraz poglądowy pochodzi z katalogu treningowego przewidzianej klasy.
         reference_path = min(
-            path for path in (train_dir / predicted_class).rglob("*")
+            path for path in (TRAIN_PATH / predicted_class).rglob("*")
             if path.is_file() and path.suffix.lower() in EXTENSIONS
         )
         show_image(input_photo, image_path)
@@ -119,13 +142,13 @@ def main():
         )
 
     def open_photo():
-        photo_dir = PROJECT_DIR / "zdjecia_spoza_ptsd"
-        if not photo_dir.is_dir():
-            photo_dir = PROJECT_DIR
+        photo_path = PROJECT_PATH / "zdjecia_spoza_ptsd"
+        if not photo_path.is_dir():
+            photo_path = PROJECT_PATH
         filename = filedialog.askopenfilename(
             parent=window,
             title="Wybierz zdjęcie znaku",
-            initialdir=photo_dir,
+            initialdir=photo_path,
             filetypes=[("Zdjęcia", "*.jpg *.jpeg *.png *.bmp *.gif")],
         )
         if not filename:
@@ -141,7 +164,7 @@ def main():
     buttons = ttk.Frame(content)
     buttons.grid(row=0, column=0, columnspan=2)
     for column, (code, filename) in enumerate(EXAMPLES):
-        image_path = DATASET_DIR / "test" / code / filename
+        image_path = TEST_PATH / code / filename
         ttk.Button(
             buttons, text=f"Pokaż {code}",
             command=lambda image_path=image_path, code=code: show_prediction(image_path, code),
@@ -151,7 +174,7 @@ def main():
     )
 
     code, filename = EXAMPLES[0]
-    show_prediction(DATASET_DIR / "test" / code / filename, code)
+    show_prediction(TEST_PATH / code / filename, code)
     window.mainloop()
 
 
