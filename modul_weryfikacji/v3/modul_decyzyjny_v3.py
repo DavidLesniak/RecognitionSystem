@@ -3,48 +3,74 @@ from pathlib import Path
 
 from reguly_weryfikacji_v3 import verify_prediction
 
+PROJECT_PATH = Path(__file__).resolve().parent
+INPUT_FILE = PROJECT_PATH / "wyniki_walidacji_v3.csv"
+OUTPUT_FILE = PROJECT_PATH / "decyzje_walidacji_v3.csv"
 
-project_dir = Path(__file__).resolve().parent
-input_file = project_dir / "wyniki_walidacji_v3.csv"
-output_file = project_dir / "decyzje_walidacji_v3.csv"
-
-with input_file.open(encoding="utf-8-sig", newline="") as file:
+with INPUT_FILE.open(
+    "r", encoding="utf-8-sig", newline=""
+) as file:
     results = list(csv.DictReader(file, delimiter=";"))
 
 if not results:
-    raise ValueError("Plik z wynikami walidacji jest pusty.")
+    raise RuntimeError("Brak wyników walidacyjnych.")
 
 counters = {
-    "ACCEPT": {"1": 0, "0": 0},
-    "WARN": {"1": 0, "0": 0},
-    "REJECT": {"1": 0, "0": 0},
+    "ACCEPT": {"poprawne": 0, "bledne": 0},
+    "WARN": {"poprawne": 0, "bledne": 0},
+    "REJECT": {"poprawne": 0, "bledne": 0},
 }
 
 for row in results:
-    decision = verify_prediction(
-        float(row["confidence"]),
-        float(row["margin"]),
-        float(row["entropy"]),
-    )
-    row["decyzja"] = decision
-    counters[decision][row["poprawna"]] += 1
+    confidence = float(row["confidence"])
+    margin = float(row["margin"])
+    entropy = float(row["entropy"])
 
-with output_file.open("w", encoding="utf-8-sig", newline="") as file:
-    writer = csv.DictWriter(file, fieldnames=results[0].keys(), delimiter=";")
+    decision = verify_prediction(confidence, margin, entropy)
+    row["decyzja"] = decision
+
+    if row["poprawna"] == "1":
+        counters[decision]["poprawne"] += 1
+    else:
+        counters[decision]["bledne"] += 1
+
+with OUTPUT_FILE.open(
+    "w", encoding="utf-8-sig", newline=""
+) as file:
+    writer = csv.DictWriter(
+        file, fieldnames=results[0].keys(), delimiter=";"
+    )
     writer.writeheader()
     writer.writerows(results)
 
+
 print("\n--- DECYZJE WALIDACYJNE V3 ---")
+
 for decision, counts in counters.items():
-    print(
-        f"{decision}: {sum(counts.values())} "
-        f"(zgodne: {counts['1']}, niezgodne: {counts['0']})"
-    )
+    total = counts["poprawne"] + counts["bledne"]
 
-accepted_count = sum(counters["ACCEPT"].values())
-flagged_disagreements = counters["WARN"]["0"] + counters["REJECT"]["0"]
-all_disagreements = counters["ACCEPT"]["0"] + flagged_disagreements
+    print(f"\n{decision}: {total}")
+    print(f"  Zgodne z etykietami: {counts['poprawne']}")
+    print(f"  Niezgodne z etykietami: {counts['bledne']}")
 
-print(f"Pokrycie ACCEPT: {100 * accepted_count / len(results):.2f}%")
+accepted = counters["ACCEPT"]
+accepted_total = accepted["poprawne"] + accepted["bledne"]
+
+coverage = accepted_total / len(results) * 100
+accepted_error_rate = (
+    accepted["bledne"] / accepted_total * 100
+    if accepted_total else 0
+)
+
+flagged_disagreements = counters["WARN"]["bledne"] + counters["REJECT"]["bledne"]
+all_disagreements = accepted["bledne"] + flagged_disagreements
+
+print("\n--- PODSUMOWANIE ---")
+print(f"Przeanalizowane predykcje: {len(results)}")
+print(f"Pokrycie ACCEPT: {coverage:.2f}%")
+print(
+    "Odsetek niezgodności w ACCEPT: "
+    f"{accepted_error_rate:.2f}%"
+)
 print(f"Niezgodności w WARN lub REJECT: {flagged_disagreements}/{all_disagreements}")
-print(f"Wyniki zapisano do: {output_file}")
+print(f"Wyniki zapisano do: {OUTPUT_FILE}")
