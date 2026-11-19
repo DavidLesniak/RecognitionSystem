@@ -1,0 +1,81 @@
+{
+  "tensorflow": "2.21.0",
+  "opencv": "5.0.0",
+  "seed": 181126,
+  "model_sha256": "5249f660742c494587199720b4c2aa5080dfa79825afb1cff1871709fcee4863",
+  "test_archive_size": 4298,
+  "filters": {
+    "Bez filtra": {
+      "brightness": 0,
+      "contrast": 1.0,
+      "saturation": 1.0,
+      "gamma": 1.0,
+      "sharpen": 0.0,
+      "denoise": 0,
+      "clahe": false
+    },
+    "Jasność +15": {
+      "brightness": 15,
+      "contrast": 1.0,
+      "saturation": 1.0,
+      "gamma": 1.0,
+      "sharpen": 0.0,
+      "denoise": 0,
+      "clahe": false
+    },
+    "Gamma 0,75": {
+      "brightness": 0,
+      "contrast": 1.0,
+      "saturation": 1.0,
+      "gamma": 0.75,
+      "sharpen": 0.0,
+      "denoise": 0,
+      "clahe": false
+    },
+    "Kontrast ×1,25": {
+      "brightness": 0,
+      "contrast": 1.25,
+      "saturation": 1.0,
+      "gamma": 1.0,
+      "sharpen": 0.0,
+      "denoise": 0,
+      "clahe": false
+    },
+    "CLAHE": {
+      "brightness": 0,
+      "contrast": 1.0,
+      "saturation": 1.0,
+      "gamma": 1.0,
+      "sharpen": 0.0,
+      "denoise": 0,
+      "clahe": true
+    },
+    "Nasycenie ×1,25": {
+      "brightness": 0,
+      "contrast": 1.0,
+      "saturation": 1.25,
+      "gamma": 1.0,
+      "sharpen": 0.0,
+      "denoise": 0,
+      "clahe": false
+    },
+    "Wyostrzanie 0,50": {
+      "brightness": 0,
+      "contrast": 1.0,
+      "saturation": 1.0,
+      "gamma": 1.0,
+      "sharpen": 0.5,
+      "denoise": 0,
+      "clahe": false
+    },
+    "Odszumianie 7": {
+      "brightness": 0,
+      "contrast": 1.0,
+      "saturation": 1.0,
+      "gamma": 1.0,
+      "sharpen": 0.0,
+      "denoise": 7,
+      "clahe": false
+    }
+  }
+}
