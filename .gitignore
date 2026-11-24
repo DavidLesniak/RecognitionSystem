@@ -3,6 +3,8 @@ PTSD/
 PTSD_znaki/
 PTSD_znaki_zbalansowane/
 PTSD_seria/
+TROBP12k_ujecia/
+modul_YOLO/model_yolo_gotowy/v1/weights/epoch*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
