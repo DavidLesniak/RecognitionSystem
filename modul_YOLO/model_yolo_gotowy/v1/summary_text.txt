@@ -1,0 +1,33 @@
+EarlyStopping: Training stopped early as no improvement observed in last 15 epochs. Best results observed at epoch 25, best model saved as best.pt.
+To update EarlyStopping(patience=15) pass a new patience value, i.e. `patience=300` or use `patience=0` to disable EarlyStopping.
+
+25 epochs completed in 2.271 hours.
+Optimizer stripped from /home/ufo/Pulpit/RecognitionSystem/modul_YOLO/model_yolo_gotowy/v1/weights/last.pt, 20.4MB
+Optimizer stripped from /home/ufo/Pulpit/RecognitionSystem/modul_YOLO/model_yolo_gotowy/v1/weights/best.pt, 20.4MB
+
+Validating /home/ufo/Pulpit/RecognitionSystem/modul_YOLO/model_yolo_gotowy/v1/weights/best.pt...
+Ultralytics 8.4.216 🚀 Python-3.12.15 torch-2.15.0+cu132 CUDA:0 (NVIDIA GeForce RTX 5060, 7705MiB)
+/home/ufo/Pulpit/RecognitionSystem/.venv/lib/python3.12/site-packages/triton/backends/nvidia/driver.c:9:10: fatal error: Python.h: Nie ma takiego pliku ani katalogu
+    9 | #include <Python.h>
+      |          ^~~~~~~~~~
+compilation terminated.
+YOLO26s summary (fused): 120 layers, 9,465,567 parameters, 0 gradients, 20.8 GFLOPs
+                 Class     Images  Instances      Box(P          R      mAP50  mAP50-95): 100% ━━━━━━━━━━━━ 117/117 18.7it/s 6.3s
+                   all        935       3327      0.919      0.854      0.918      0.579
+Speed: 0.3ms preprocess, 5.2ms inference, 0.0ms loss, 0.4ms postprocess per image
+Results saved to /home/ufo/Pulpit/RecognitionSystem/modul_YOLO/model_yolo_gotowy/v1
+
+Objaśnienie --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+YOLO26s summary (fused): 120 layers, 9,465,567 parameters, 0 gradients, 20.8 GFLOPs
+                 Class     Images  Instances      Box(P          R      mAP50  mAP50-95): 100% ━━━━━━━━━━━━ 117/117 18.7it/s 6.3s
+                   all        935       3327      0.919      0.854      0.918      0.579
+Speed: 0.3ms preprocess, 5.2ms inference, 0.0ms loss, 0.4ms postprocess per image
+
+Ocena skuteczności Twojego modelu (best.pt)
+
+Na zbiorze walidacyjnym (935 zdjęć, 3327 znaków drogowych) model osiągnął:
+• mAP@50 = 0.918 (91,8%): Bardzo wysoka skuteczność wykrywania znaków drogowych w kadrze.
+• Precision (Precyzja) = 0.919 (91,9%): Gdy model zaznacza ramkę, w ponad 9 na 10 przypadków jest to faktyczny znak drogowy (bardzo mało fałszywych alarmów).
+• Recall (Czułość) = 0.854 (85,4%): Model odnajduje ponad 85% wszystkich znaków widocznych na zdjęciach (wliczając te bardzo małe w oddali).
+• Szybkość na RTX 5060 = 5.2 ms na klatkę: Daje to ok. 190 FPS w pełnej rozdzielczości 1280x1280 – model bez problemu obsłuży wideo w czasie rzeczywistym.
