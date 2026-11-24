@@ -4,7 +4,7 @@ if [ "$1" == "start" ]; then
     echo ">>> Przełączanie RTX 5060 w tryb TRENINGU AI (2400-2950 MHz, 145W)..."
     sudo nvidia-smi -pm 1
     sudo nvidia-smi -pl 145
-    sudo nvidia-smi -lgc 2400,2950
+    sudo nvidia-smi -lgc 2700,2950
     echo ">>> Gotowe! Karta skonfigurowana pod maksymalną wydajność TensorFlow."
     nvidia-smi --query-gpu=name,persistence_mode,power.limit,clocks.gr,temperature.gpu --format=csv
 
