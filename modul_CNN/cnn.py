@@ -30,8 +30,8 @@ model_suffix = '.keras'
 """
 Ścieżki do folderów z danymi
 """
-path_train = os.path.join(os.getcwd(), '..', 'PTSD_znaki_zabalansowane', 'train')
-path_test  = os.path.join(os.getcwd(), '..', 'PTSD_znaki_zabalansowane', 'test' )
+path_train = os.path.join(os.getcwd(), '..', 'PTSD_znaki_zbalansowane', 'train')
+path_test  = os.path.join(os.getcwd(), '..', 'PTSD_znaki_zbalansowane', 'test' )
 
 
 
